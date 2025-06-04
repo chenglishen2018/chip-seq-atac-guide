@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide: ChIP-seq vs. scATAC-seq</title>
+    <!-- Chosen Palette: Warm Neutral (alabaster/gray-100), with Muted Blue (ChIP-seq) and Muted Teal (scATAC-seq) accents. -->
+    <!-- Application Structure Plan: A section-based, single-page application with sticky navigation. The core is a side-by-side comparison view, followed by tabbed "deep dive" sections for each technique. This structure facilitates direct comparison while allowing users to explore details on demand. An interactive "Choosing a Method" guide provides practical utility. This non-linear exploration path is superior to a linear report for user engagement and understanding. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: ChIP-seq & ATAC-seq Workflows. Goal: Explain the processes. Viz: Interactive CSS diagrams. Interaction: Hover to show step details. Justification: More engaging and intuitive than static text. Library/Method: HTML/CSS/JS.
+        - Report Info: scATAC-seq resolving cellular heterogeneity. Goal: Show how it deconstructs mixed populations. Viz: Chart.js line chart. Interaction: Button click to split a "bulk" average chart into multiple "single-cell" charts. Justification: Visually demonstrates the key advantage of the technique. Library/Method: Chart.js.
+        - Report Info: TF vs Histone peak shapes in ChIP-seq. Goal: Explain data characteristics. Viz: Chart.js line chart. Interaction: Tabs to switch between peak types. Justification: Clear visual representation of a key data feature. Library/Method: Chart.js.
+        - Report Info: Comparison Table Data. Goal: Provide a quick reference. Viz: Styled HTML table. Interaction: Hover effects for readability. Justification: Organizes dense comparative data effectively. Library/Method: HTML/TailwindCSS.
+        - Report Info: Choosing between methods. Goal: Guide user decisions. Viz: Interactive decision flow diagram. Interaction: Clickable choices leading to recommendations. Justification: Turns passive information into an active, helpful tool. Library/Method: JS/HTML/CSS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 45vh;
+        }
+        .nav-link {
+            transition: color 0.3s, border-color 0.3s;
+        }
+        .nav-link.active {
+            color: #0d9488; 
+            border-bottom-color: #0d9488;
+        }
+        .tab.active {
+            background-color: #0d9488;
+            color: white;
+        }
+        .decision-node {
+            transition: all 0.3s ease;
+        }
+        .decision-node.highlight {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(13, 148, 136, 0.4);
+            border-color: #0d9488;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-sm">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <h1 class="text-xl md:text-2xl font-bold text-gray-900">Epigenomic Explorers</h1>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#comparison" class="nav-link text-gray-600 hover:text-teal-600 border-b-2 border-transparent pb-1">Comparison</a>
+                    <a href="#deep-dive-chip" class="nav-link text-gray-600 hover:text-teal-600 border-b-2 border-transparent pb-1">ChIP-seq</a>
+                    <a href="#deep-dive-atac" class="nav-link text-gray-600 hover:text-teal-600 border-b-2 border-transparent pb-1">scATAC-seq</a>
+                    <a href="#chooser" class="nav-link text-gray-600 hover:text-teal-600 border-b-2 border-transparent pb-1">Method Chooser</a>
+                    <a href="#synergy" class="nav-link text-gray-600 hover:text-teal-600 border-b-2 border-transparent pb-1">Synergy</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="hero" class="bg-white py-16 md:py-24">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight">ChIP-seq vs. scATAC-seq</h2>
+                <p class="mt-4 text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">Two powerful tools, two different questions. This guide interactively explores how ChIP-seq and scATAC-seq unravel the secrets of the genome, one probing protein binding, the other mapping chromatin accessibility.</p>
+            </div>
+        </section>
+        
+        <section id="comparison" class="py-16 md:py-24">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold">Techniques at a Glance</h3>
+                    <p class="mt-2 text-gray-600 max-w-2xl mx-auto">This section provides a high-level, side-by-side comparison of ChIP-seq and scATAC-seq, highlighting their core principles and primary outputs to help you quickly grasp their fundamental differences.</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 md:gap-12">
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-blue-200">
+                        <h4 class="text-2xl font-bold text-center text-blue-700">ChIP-seq</h4>
+                        <p class="text-center text-gray-600 mt-2">"Who binds where?"</p>
+                        
+                        <div class="mt-6">
+                            <h5 class="font-semibold text-lg mb-2">Key Principle:</h5>
+                            <p class="text-gray-700">Uses a specific <span class="font-bold text-blue-600">antibody</span> to isolate a target protein and its bound DNA, directly identifying protein-DNA interaction sites.</p>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h5 class="font-semibold text-lg mb-2">Workflow:</h5>
+                            <div class="space-y-3 workflow-diagram" data-technique="chip">
+                                <div class="flex items-center p-3 bg-blue-50 rounded-lg workflow-step" data-step="1">
+                                    <span class="text-blue-600 font-bold mr-3">1.</span>
+                                    <span>Cross-link & Fragment</span>
+                                </div>
+                                <div class="flex items-center p-3 bg-blue-50 rounded-lg workflow-step" data-step="2">
+                                    <span class="text-blue-600 font-bold mr-3">2.</span>
+                                    <span>Immunoprecipitate (IP)</span>
+                                </div>
+                                <div class="flex items-center p-3 bg-blue-50 rounded-lg workflow-step" data-step="3">
+                                    <span class="text-blue-600 font-bold mr-3">3.</span>
+                                    <span>Purify & Sequence</span>
+                                </div>
+                                <div class="flex items-center p-3 bg-blue-50 rounded-lg workflow-step" data-step="4">
+                                    <span class="text-blue-600 font-bold mr-3">4.</span>
+                                    <span>Map Reads & Call Peaks</span>
+                                </div>
+                            </div>
+                            <p id="chip-workflow-info" class="mt-3 text-sm text-gray-500 h-12">Hover over a step to see details.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-teal-200">
+                        <h4 class="text-2xl font-bold text-center text-teal-700">scATAC-seq</h4>
+                        <p class="text-center text-gray-600 mt-2">"Where is chromatin open?"</p>
+                        
+                        <div class="mt-6">
+                            <h5 class="font-semibold text-lg mb-2">Key Principle:</h5>
+                            <p class="text-gray-700">Uses <span class="font-bold text-teal-600">Tn5 Transposase</span> to cut and tag accessible ("open") DNA regions, mapping potential regulatory sites at a single-cell level.</p>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h5 class="font-semibold text-lg mb-2">Workflow:</h5>
+                            <div class="space-y-3 workflow-diagram" data-technique="atac">
+                                <div class="flex items-center p-3 bg-teal-50 rounded-lg workflow-step" data-step="1">
+                                    <span class="text-teal-600 font-bold mr-3">1.</span>
+                                    <span>Isolate & Barcode Nuclei</span>
+                                </div>
+                                <div class="flex items-center p-3 bg-teal-50 rounded-lg workflow-step" data-step="2">
+                                    <span class="text-teal-600 font-bold mr-3">2.</span>
+                                    <span>Tagmentation (Cut & Tag)</span>
+                                </div>
+                                <div class="flex items-center p-3 bg-teal-50 rounded-lg workflow-step" data-step="3">
+                                    <span class="text-teal-600 font-bold mr-3">3.</span>
+                                    <span>Amplify & Sequence</span>
+                                </div>
+                                <div class="flex items-center p-3 bg-teal-50 rounded-lg workflow-step" data-step="4">
+                                    <span class="text-teal-600 font-bold mr-3">4.</span>
+                                    <span>Map Reads & Identify Open Regions</span>
+                                </div>
+                            </div>
+                            <p id="atac-workflow-info" class="mt-3 text-sm text-gray-500 h-12">Hover over a step to see details.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="deep-dive-chip" class="py-16 md:py-24 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold text-blue-700">Deep Dive: ChIP-seq</h3>
+                     <p class="mt-2 text-gray-600 max-w-2xl mx-auto">This section explores the nuances of ChIP-seq, covering its mechanism, primary targets, and the key data characteristics you can expect. Understanding these details is crucial for designing experiments and interpreting results accurately.</p>
+                </div>
+
+                <div class="bg-gray-100 p-2 rounded-xl max-w-md mx-auto mb-8 flex space-x-1" id="chip-tabs">
+                    <button data-target="chip-peaks" class="tab active flex-1 py-2 px-4 rounded-lg font-semibold">Data Peaks</button>
+                    <button data-target="chip-proscons" class="tab flex-1 py-2 px-4 rounded-lg font-semibold">Pros & Cons</button>
+                </div>
+
+                <div id="chip-content">
+                    <div id="chip-peaks">
+                        <h4 class="text-xl font-semibold text-center mb-4">Understanding Peak Shapes</h4>
+                        <div class="chart-container">
+                            <canvas id="chipPeakChart"></canvas>
+                        </div>
+                        <p class="text-center mt-4 text-gray-600 max-w-2xl mx-auto">ChIP-seq data reveals distinct peak shapes. Transcription factors produce 'sharp' peaks at specific binding sites, while histone modifications create 'broad' peaks over larger genomic regions. Choosing the right peak-calling algorithm is essential for accurate analysis.</p>
+                    </div>
+                    <div id="chip-proscons" class="hidden">
+                         <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                            <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                                <h5 class="font-bold text-lg text-green-800">Advantages</h5>
+                                <ul class="mt-4 space-y-2 list-disc list-inside text-gray-700">
+                                    <li><b>Direct Evidence:</b> Provides direct proof of a specific protein binding to DNA.</li>
+                                    <li><b>High Resolution:</b> Can pinpoint binding sites with high precision.</li>
+                                    <li><b>Versatile:</b> Maps both transcription factors and histone modifications.</li>
+                                    <li><b>Quantitative:</b> Signal strength can correlate with binding affinity.</li>
+                                </ul>
+                            </div>
+                            <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+                                <h5 class="font-bold text-lg text-red-800">Limitations</h5>
+                                <ul class="mt-4 space-y-2 list-disc list-inside text-gray-700">
+                                    <li><b>Antibody Dependent:</b> Success hinges on a high-quality, specific antibody, which can be a major bottleneck.</li>
+                                    <li><b>High Input:</b> Traditionally requires millions of cells, limiting use with rare samples.</li>
+                                    <li><b>Complex Workflow:</b> Involves multiple steps, including cross-linking and fragmentation, which can introduce artifacts.</li>
+                                     <li><b>Bulk Analysis:</b> Averages signals across all cells, masking heterogeneity.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="deep-dive-atac" class="py-16 md:py-24">
+            <div class="container mx-auto px-6">
+                 <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold text-teal-700">Deep Dive: scATAC-seq</h3>
+                    <p class="mt-2 text-gray-600 max-w-2xl mx-auto">Explore how scATAC-seq revolutionizes epigenomics by providing a single-cell view of the regulatory landscape. This section highlights its power to resolve cellular complexity and the unique challenges associated with its sparse data.</p>
+                </div>
+
+                <div class="bg-gray-100 p-2 rounded-xl max-w-md mx-auto mb-8 flex space-x-1" id="atac-tabs">
+                    <button data-target="atac-heterogeneity" class="tab active flex-1 py-2 px-4 rounded-lg font-semibold">Resolving Heterogeneity</button>
+                    <button data-target="atac-proscons" class="tab flex-1 py-2 px-4 rounded-lg font-semibold">Pros & Cons</button>
+                </div>
+
+                <div id="atac-content">
+                    <div id="atac-heterogeneity">
+                        <h4 class="text-xl font-semibold text-center mb-4">From Bulk Average to Single-Cell Clarity</h4>
+                        <div class="chart-container">
+                             <canvas id="atacHeterogeneityChart"></canvas>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button id="toggle-atac-view" class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition">Show Single-Cell View</button>
+                        </div>
+                        <p class="text-center mt-4 text-gray-600 max-w-2xl mx-auto">Bulk methods provide an averaged view of chromatin accessibility. scATAC-seq dissects this average, revealing distinct regulatory profiles for different cell types within a complex sample, which is critical for understanding development and disease.</p>
+                    </div>
+                    <div id="atac-proscons" class="hidden">
+                        <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                            <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                                <h5 class="font-bold text-lg text-green-800">Advantages</h5>
+                                <ul class="mt-4 space-y-2 list-disc list-inside text-gray-700">
+                                    <li><b>Resolves Heterogeneity:</b> Identifies distinct cell types and states from a mixed population.</li>
+                                    <li><b>Low Input:</b> Works with very few cells, even down to a single nucleus.</li>
+                                    <li><b>Antibody-Free:</b> Bypasses the major bottleneck of antibody validation.</li>
+                                    <li><b>Fast Workflow:</b> A streamlined process allows for rapid profiling.</li>
+                                </ul>
+                            </div>
+                            <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+                                <h5 class="font-bold text-lg text-red-800">Limitations</h5>
+                                <ul class="mt-4 space-y-2 list-disc list-inside text-gray-700">
+                                    <li><b>Data Sparsity:</b> Signal per cell is binary and sparse, making analysis computationally complex.</li>
+                                    <li><b>Indirect Inference:</b> Identifies open chromatin but not the specific protein bound there.</li>
+                                    <li><b>Tn5 Bias:</b> The transposase can have a slight sequence preference, requiring computational correction.</li>
+                                     <li><b>Requires Nuclei:</b> Needs intact, isolated nuclei, which can be challenging for some tissues.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="chooser" class="py-16 md:py-24 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold">Which Method is Right for You?</h3>
+                    <p class="mt-2 text-gray-600 max-w-2xl mx-auto">Choosing the right epigenomic technique depends entirely on your research question and experimental constraints. This interactive guide helps you navigate the key decision points based on the information in the source reports.</p>
+                </div>
+                <div class="bg-gray-50 p-8 rounded-xl shadow-md max-w-4xl mx-auto">
+                    <div id="decision-start" class="text-center">
+                        <h4 class="text-xl font-semibold mb-4">Start with your primary goal:</h4>
+                        <div class="flex flex-col md:flex-row gap-4 justify-center">
+                            <button class="decision-btn p-4 bg-white rounded-lg shadow hover:shadow-lg transition flex-1 text-left" data-next="q-protein">
+                                <strong class="text-blue-700">Identify Targets of a Specific Protein</strong>
+                                <p class="text-sm text-gray-600 mt-1">I want to know exactly where my protein of interest (e.g., a TF or histone mark) binds in the genome.</p>
+                            </button>
+                            <button class="decision-btn p-4 bg-white rounded-lg shadow hover:shadow-lg transition flex-1 text-left" data-next="q-landscape">
+                                <strong class="text-teal-700">Map the General Regulatory Landscape</strong>
+                                <p class="text-sm text-gray-600 mt-1">I want to discover all potential regulatory regions in a sample, especially if it's heterogeneous.</p>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="q-protein" class="decision-node hidden text-center">
+                        <h4 class="text-xl font-semibold mb-4">Next question: Do you have a validated, ChIP-grade antibody?</h4>
+                        <div class="flex flex-col md:flex-row gap-4 justify-center">
+                             <button class="decision-btn p-4 bg-white rounded-lg shadow hover:shadow-lg transition flex-1 text-left" data-next="rec-chip">
+                                <strong class="text-green-700">Yes</strong>
+                                <p class="text-sm text-gray-600 mt-1">I have a reliable antibody and sufficient cell material.</p>
+                            </button>
+                            <button class="decision-btn p-4 bg-white rounded-lg shadow hover:shadow-lg transition flex-1 text-left" data-next="rec-atac-alt">
+                                <strong class="text-orange-700">No / Unsure</strong>
+                                <p class="text-sm text-gray-600 mt-1">An antibody is not available, or I'm studying a novel protein.</p>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="q-landscape" class="decision-node hidden text-center">
+                         <h4 class="text-xl font-semibold mb-4">Next question: Is your sample a complex mix of cell types?</h4>
+                        <div class="flex flex-col md:flex-row gap-4 justify-center">
+                             <button class="decision-btn p-4 bg-white rounded-lg shadow hover:shadow-lg transition flex-1 text-left" data-next="rec-scatac">
+                                <strong class="text-green-700">Yes</strong>
+                                <p class="text-sm text-gray-600 mt-1">I need to resolve cell-to-cell differences in a tissue or developmental model.</p>
+                            </button>
+                            <button class="decision-btn p-4 bg-white rounded-lg shadow hover:shadow-lg transition flex-1 text-left" data-next="rec-bulk-atac">
+                                <strong class="text-orange-700">No</strong>
+                                 <p class="text-sm text-gray-600 mt-1">I'm working with a relatively homogeneous cell population.</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="recommendation" class="mt-8 pt-6 border-t border-gray-200 text-center hidden">
+                        <h5 class="text-2xl font-bold" id="rec-title"></h5>
+                        <p class="mt-2 text-gray-700 max-w-2xl mx-auto" id="rec-text"></p>
+                        <button id="reset-decision" class="mt-6 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition">Start Over</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="synergy" class="py-16 md:py-24">
+            <div class="container mx-auto px-6">
+                 <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold">Stronger Together: Synergy & The Future</h3>
+                    <p class="mt-2 text-gray-600 max-w-2xl mx-auto">Neither technique provides a complete picture alone. This final section explains how ChIP-seq and scATAC-seq are complementary, and how their integration within multi-omics frameworks is paving the way for a more holistic understanding of gene regulation.</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg max-w-3xl mx-auto">
+                    <h4 class="text-xl font-semibold mb-4">A Powerful Partnership</h4>
+                    <p class="text-gray-700 mb-6">The true power of these techniques is unlocked when they are used together. scATAC-seq can generate a broad map of potential regulatory elements, which can then be validated and assigned to specific proteins using ChIP-seq.</p>
+                    <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 text-center">
+                        <div class="p-4 bg-teal-50 rounded-lg border border-teal-200">
+                            <p class="font-semibold text-teal-800">1. scATAC-seq</p>
+                            <p class="text-sm text-gray-600">Identifies a cell-type-specific open chromatin region (a candidate enhancer).</p>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-400">→</div>
+                        <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                             <p class="font-semibold text-blue-800">2. ChIP-seq (for H3K27ac)</p>
+                             <p class="text-sm text-gray-600">Confirms the region is an active enhancer by detecting the specific histone mark.</p>
+                        </div>
+                    </div>
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <h4 class="text-xl font-semibold mb-4">The Future is Multi-Omic</h4>
+                        <p class="text-gray-700">The field is rapidly moving towards single-cell multi-omics, where technologies simultaneously measure chromatin accessibility, gene expression, and even protein levels from the same single cell. This integrated approach provides a complete, dynamic view of gene regulatory networks, promising to unravel the full complexity of biology in health and disease.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-6 text-center">
+            <p>&copy; 2024 Epigenomic Analysis Portal. All rights reserved.</p>
+            <p class="text-sm text-gray-400 mt-2">Information synthesized from provided research reports.</p>
+        </div>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const workflowInfo = {
+                chip: {
+                    1: "Cells are treated with formaldehyde to create stable, covalent links between proteins and the DNA they are bound to.",
+                    2: "A specific antibody binds to the target protein. This complex is then 'pulled down' from the solution, enriching for the target.",
+                    3: "The cross-links are reversed, and the DNA is purified. The resulting fragments are prepared into a library for sequencing.",
+                    4: "Sequenced reads are aligned to a genome. 'Peaks' of read enrichment identify the protein's binding sites."
+                },
+                atac: {
+                    1: "Nuclei are isolated from cells. In scATAC-seq, they are encapsulated in droplets with unique barcode beads.",
+                    2: "The Tn5 transposase enzyme simultaneously cuts accessible DNA and ligates sequencing adapters in a single step.",
+                    3: "The adapter-tagged DNA fragments are amplified via PCR to create a sequenceable library.",
+                    4: "Reads are mapped to identify where Tn5 inserted, revealing genome-wide patterns of open, accessible chromatin."
+                }
+            };
+
+            document.querySelectorAll('.workflow-diagram').forEach(diagram => {
+                const technique = diagram.dataset.technique;
+                const infoEl = document.getElementById(`${technique}-workflow-info`);
+                
+                diagram.querySelectorAll('.workflow-step').forEach(step => {
+                    step.addEventListener('mouseenter', () => {
+                        infoEl.textContent = workflowInfo[technique][step.dataset.step];
+                    });
+                });
+
+                diagram.addEventListener('mouseleave', () => {
+                    infoEl.textContent = 'Hover over a step to see details.';
+                });
+            });
+            
+            function setupTabSystem(tabContainerId, contentContainerId) {
+                const tabContainer = document.getElementById(tabContainerId);
+                const contentContainer = document.getElementById(contentContainerId);
+                if (!tabContainer || !contentContainer) return;
+                
+                const tabs = tabContainer.querySelectorAll('.tab');
+                const contents = contentContainer.children;
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        
+                        const targetId = tab.dataset.target;
+                        
+                        Array.from(contents).forEach(content => {
+                            if (content.id === targetId) {
+                                content.classList.remove('hidden');
+                            } else {
+                                content.classList.add('hidden');
+                            }
+                        });
+                    });
+                });
+            }
+
+            setupTabSystem('chip-tabs', 'chip-content');
+            setupTabSystem('atac-tabs', 'atac-content');
+
+            const chipPeakCtx = document.getElementById('chipPeakChart');
+            if(chipPeakCtx) {
+                const labels = Array.from({length: 50}, (_, i) => i);
+                const sharpPeakData = labels.map(x => (x > 22 && x < 28) ? Math.exp(-0.2 * Math.pow(x - 25, 2)) * 100 : Math.random() * 5);
+                const broadPeakData = labels.map(x => (x > 15 && x < 35) ? (Math.exp(-0.01 * Math.pow(x - 25, 2)) * 80) + 10 : Math.random() * 10);
+                
+                new Chart(chipPeakCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Sharp Peak (e.g., Transcription Factor)',
+                            data: sharpPeakData,
+                            borderColor: 'rgba(59, 130, 246, 0.8)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Broad Peak (e.g., Histone Mark)',
+                            data: broadPeakData,
+                            borderColor: 'rgba(217, 70, 239, 0.8)',
+                            backgroundColor: 'rgba(217, 70, 239, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Signal Enrichment'}},
+                            x: { title: { display: true, text: 'Genomic Position' }}
+                        },
+                        plugins: {
+                            tooltip: {
+                                enabled: true,
+                                mode: 'index',
+                                intersect: false,
+                            }
+                        }
+                    }
+                });
+            }
+
+            const atacHeterogeneityCtx = document.getElementById('atacHeterogeneityChart');
+            if(atacHeterogeneityCtx) {
+                const labels = ['Gene A', 'Gene B', 'Gene C', 'Gene D', 'Gene E', 'Gene F'];
+                const bulkData = [60, 45, 80, 55, 70, 30];
+                const cellTypeA = [90, 20, 85, 10, 95, 15];
+                const cellTypeB = [30, 70, 75, 90, 45, 45];
+                let atacChart;
+
+                const chartConfig = {
+                    type: 'bar',
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Chromatin Accessibility' }},
+                            x: { title: { display: true, text: 'Genomic Loci' }}
+                        },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                };
+
+                function showBulkView() {
+                    if(atacChart) atacChart.destroy();
+                    atacChart = new Chart(atacHeterogeneityCtx, {
+                        ...chartConfig,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Bulk ATAC-seq (Average)',
+                                data: bulkData,
+                                backgroundColor: 'rgba(107, 114, 128, 0.6)',
+                                borderColor: 'rgba(107, 114, 128, 1)',
+                                borderWidth: 1
+                            }]
+                        }
+                    });
+                }
+                
+                function showSingleCellView() {
+                    if(atacChart) atacChart.destroy();
+                     atacChart = new Chart(atacHeterogeneityCtx, {
+                        ...chartConfig,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'scATAC-seq: Cell Type A',
+                                data: cellTypeA,
+                                backgroundColor: 'rgba(219, 39, 119, 0.6)',
+                                borderColor: 'rgba(219, 39, 119, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'scATAC-seq: Cell Type B',
+                                data: cellTypeB,
+                                backgroundColor: 'rgba(14, 165, 233, 0.6)',
+                                borderColor: 'rgba(14, 165, 233, 1)',
+                                borderWidth: 1
+                            }]
+                        }
+                    });
+                }
+
+                showBulkView();
+                const toggleBtn = document.getElementById('toggle-atac-view');
+                let isBulkView = true;
+                toggleBtn.addEventListener('click', () => {
+                    isBulkView = !isBulkView;
+                    if(isBulkView) {
+                        showBulkView();
+                        toggleBtn.textContent = "Show Single-Cell View";
+                    } else {
+                        showSingleCellView();
+                        toggleBtn.textContent = "Show Bulk View";
+                    }
+                });
+            }
+            
+            const decisionBtns = document.querySelectorAll('.decision-btn');
+            const decisionNodes = document.querySelectorAll('.decision-node');
+            const recommendationEl = document.getElementById('recommendation');
+            const recTitle = document.getElementById('rec-title');
+            const recText = document.getElementById('rec-text');
+            const startNode = document.getElementById('decision-start');
+            const resetBtn = document.getElementById('reset-decision');
+
+            const recommendations = {
+                'rec-chip': { title: 'Recommendation: ChIP-seq', text: 'ChIP-seq is the ideal method. It directly answers "who binds where?" by using an antibody to isolate your specific protein of interest. This provides direct, mechanistic evidence of its binding sites.'},
+                'rec-atac-alt': { title: 'Recommendation: ATAC-seq + Motif Analysis or Epitope Tagging', text: 'Without a good antibody, direct ChIP-seq is not feasible. Consider using ATAC-seq to map open chromatin and then perform motif analysis to infer binding. Alternatively, you could engineer your cells to express an epitope-tagged version of your protein and perform ChIP-seq with a reliable tag-specific antibody.'},
+                'rec-scatac': { title: 'Recommendation: scATAC-seq', text: 'scATAC-seq is essential here. It will allow you to dissect the mixed population, identify distinct cell types, and map their unique chromatin accessibility profiles, revealing cell-type-specific regulatory elements.'},
+                'rec-bulk-atac': { title: 'Recommendation: Bulk ATAC-seq', text: 'Since your population is homogeneous, bulk ATAC-seq is a fast, efficient, and cost-effective method to get a high-quality map of all potential regulatory regions across the genome.'}
+            };
+
+            decisionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const nextId = btn.dataset.next;
+                    btn.closest('.decision-node, #decision-start').classList.add('hidden');
+                    
+                    if(recommendations[nextId]){
+                        recTitle.textContent = recommendations[nextId].title;
+                        recText.textContent = recommendations[nextId].text;
+                        recommendationEl.classList.remove('hidden');
+                    } else {
+                        const nextNode = document.getElementById(nextId);
+                        if(nextNode) {
+                            nextNode.classList.remove('hidden');
+                            nextNode.classList.add('highlight');
+                        }
+                    }
+                });
+            });
+            
+            resetBtn.addEventListener('click', () => {
+                recommendationEl.classList.add('hidden');
+                decisionNodes.forEach(node => node.classList.add('hidden'));
+                startNode.classList.remove('hidden');
+            });
+
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 100) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
